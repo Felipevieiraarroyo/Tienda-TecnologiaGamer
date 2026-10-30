@@ -23,3 +23,21 @@ api.interceptors.request.use((config) => {
 //   en ese caso no hay que redirigir (revisar error.config?.url)
 // - siempre terminar con return Promise.reject(error)
 // para probarlo: cambiar el token en localStorage y recargar /dashboard
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+    const url: string = error.config?.url ?? "";
+    // El login también da 401 con contraseña incorrecta: ahí NO redirigimos
+    const esLogin = url.includes("/auth/login");
+
+    if (status === 401 && !esLogin) {
+      useAuthStore.getState().logout();
+      // Fuera de un componente no hay useNavigate
+      window.location.href = "/login?sesion=expirada";
+    }
+
+    return Promise.reject(error);
+  },
+);

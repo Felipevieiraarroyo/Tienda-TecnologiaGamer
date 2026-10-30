@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";             //Añadir import . natanael
 import { loginSchema, type LoginFormData } from "../schemas/loginSchema";
 import { authService } from "../services/auth";
 import { useAuthStore } from "../store/useAuthStore";
 import { tema } from "../tema";
+
 
 const ANIO = new Date().getFullYear();
 
@@ -30,6 +31,9 @@ export function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
+  const [searchParams] = useSearchParams();
+  const sesionExpirada = searchParams.get("sesion") === "expirada";
+  
   const onSubmit = async (data: LoginFormData) => {
     try {
       setErrorServidor("");
@@ -48,7 +52,7 @@ export function LoginPage() {
     }
   };
 
-  return (
+ return (
     <main className="min-h-screen bg-stone-50 px-5 py-8 text-slate-900 sm:px-8">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl items-center justify-center">
         <section className="grid w-full overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-xl shadow-stone-200/50 lg:grid-cols-[1.05fr_0.95fr]">
@@ -90,6 +94,17 @@ export function LoginPage() {
                   Accede a tu cuenta para ver tus pedidos y favoritos.
                 </p>
               </div>
+
+              {/* Aviso amarillo: solo si la URL trae ?sesion=expirada
+                  y no hay otro error rojo en pantalla Natnael*/}
+              {sesionExpirada && !errorServidor && (
+                <div
+                  role="alert"
+                  className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700"
+                >
+                  Tu sesión expiró. Volvé a iniciar sesión para continuar.
+                </div>
+              )}
 
               {errorServidor && (
                 <div className="mb-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-600 border border-rose-200">
