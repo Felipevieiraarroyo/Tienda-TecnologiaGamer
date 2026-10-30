@@ -5,9 +5,36 @@ interface Props {
   onCambiarPagina: (nueva: number) => void;
 }
 
-// TODO [C]: botones Anterior y Siguiente
-// - Anterior deshabilitado en la pagina 1 o mientras carga
-// - Siguiente deshabilitado si no hayMas o mientras carga
-export function Paginacion({ pagina }: Props) {
-  return <p className="mt-8 text-center text-sm">Página {pagina}</p>;
+export function Paginacion({
+  pagina,
+  hayMas,
+  deshabilitado,
+  onCambiarPagina,
+}: Props) {
+  const claseBoton =
+    "rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-marca-700 transition hover:bg-marca-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-600 disabled:cursor-not-allowed disabled:opacity-40";
+
+  return (
+    <nav aria-label="Paginación de productos" className="mt-8 flex items-center justify-center gap-4">
+      <button
+        type="button"
+        className={claseBoton}
+        disabled={pagina <= 1 || deshabilitado}
+        onClick={() => onCambiarPagina(pagina - 1)}
+      >
+        Anterior
+      </button>
+      <span aria-live="polite" aria-atomic="true" className="text-sm text-slate-600">
+        Página {pagina}
+      </span>
+      <button
+        type="button"
+        className={claseBoton}
+        disabled={!hayMas || deshabilitado}
+        onClick={() => onCambiarPagina(pagina + 1)}
+      >
+        Siguiente
+      </button>
+    </nav>
+  );
 }

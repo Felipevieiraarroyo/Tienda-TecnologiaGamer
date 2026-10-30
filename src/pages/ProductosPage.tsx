@@ -1,41 +1,64 @@
-import { useState } from "react";
+import { useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ListaProductos } from "../components/ListaProductos";
 import { Paginacion } from "../components/Paginacion";
 import { useApi } from "../hooks/useApi";
 import { productosService } from "../services/productos";
+import { tema } from "../tema";
 
 const POR_PAGINA = 6;
 
-// TODO [C]: catalogo de la tienda
-// - ahora se ven los productos de TODOS los grupos. Mostrar solo los de
-//   su tienda usando tema.categorias (el select tambien)
-// - guardar pagina y categoria en la URL con useSearchParams
-//   ej: /productos?categoria=Ropa-Polos&pagina=2
-// - si la URL trae algo raro (?pagina=abc, una categoria que no es suya)
-//   usar los valores por defecto
-// - al cambiar de categoria volver a la pagina 1
-// - implementar getPagina y <Paginacion />
 export function ProductosPage() {
-  const [pagina, setPagina] = useState(1);
-  const [categoria, setCategoria] = useState("Todas");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const paginaUrl = searchParams.get("pagina") ?? "1";
+  const numeroPagina = Number(paginaUrl);
+  // Evita NaN, decimales, negativos y desplazamientos fuera del rango seguro.
+  const paginaValida = /^\d+$/.test(paginaUrl)
+    && Number.isSafeInteger(numeroPagina)
+    && numeroPagina >= 1
+    && Number.isSafeInteger(numeroPagina * POR_PAGINA + 1);
+  const pagina = paginaValida ? numeroPagina : 1;
+  const categoriaUrl = searchParams.get("categoria") ?? "Todas";
+  const categoriaValida = categoriaUrl === "Todas"
+    || tema.categorias.some((cat) => cat.valor === categoriaUrl);
+  const categoria = categoriaValida ? categoriaUrl : "Todas";
+
+  // Corrige enlaces inválidos sin agregar una entrada al historial.
+  useEffect(() => {
+    if (!paginaValida || !categoriaValida) {
+      const nuevos = new URLSearchParams(searchParams);
+      nuevos.set("pagina", String(pagina));
+      nuevos.set("categoria", categoria);
+      setSearchParams(nuevos, { replace: true });
+    }
+  }, [searchParams, setSearchParams, paginaValida, categoriaValida, pagina, categoria]);
 
   const { data, cargando, error, recargar } = useApi(
-    () => productosService.getPagina(pagina, POR_PAGINA, categoria),
+    async () => ({
+      ...await productosService.getPagina(pagina, POR_PAGINA, categoria),
+      pagina,
+      categoria,
+    }),
     [pagina, categoria],
   );
 
-  const { data: todos } = useApi(() => productosService.getTodos(), []);
-  const categorias = [
-    "Todas",
-    ...new Set((todos ?? []).map((p) => p.categoria)),
-  ];
+  // useApi conserva la respuesta anterior mientras llega la nueva.
+  // No mostramos sus productos ni habilitamos Siguiente para otra consulta.
+  const datosActuales = data?.pagina === pagina && data.categoria === categoria;
+  const esperando = cargando || (!error && !datosActuales);
 
   const cambiarCategoria = (nueva: string) => {
-    setCategoria(nueva);
+    const nuevos = new URLSearchParams(searchParams);
+    nuevos.set("categoria", nueva);
+    nuevos.set("pagina", "1");
+    setSearchParams(nuevos);
   };
 
   const irAPagina = (nueva: number) => {
-    setPagina(nueva);
+    const nuevos = new URLSearchParams(searchParams);
+    nuevos.set("pagina", String(nueva));
+    nuevos.set("categoria", categoria);
+    setSearchParams(nuevos);
   };
 
   return (
@@ -55,9 +78,10 @@ export function ProductosPage() {
             onChange={(e) => cambiarCategoria(e.target.value)}
             className="mt-1 block h-10 rounded-xl border border-stone-300 bg-white px-3 font-normal"
           >
-            {categorias.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
+            <option value="Todas">Todas</option>
+            {tema.categorias.map((cat) => (
+              <option key={cat.valor} value={cat.valor}>
+                {cat.etiqueta}
               </option>
             ))}
           </select>
@@ -65,8 +89,8 @@ export function ProductosPage() {
       </div>
 
       <ListaProductos
-        productos={data?.productos ?? []}
-        cargando={cargando}
+        productos={datosActuales ? data.productos : []}
+        cargando={esperando}
         error={error}
         porPagina={POR_PAGINA}
         onReintentar={recargar}
@@ -75,8 +99,8 @@ export function ProductosPage() {
 
       <Paginacion
         pagina={pagina}
-        hayMas={data?.hayMas ?? false}
-        deshabilitado={cargando}
+        hayMas={!error && datosActuales && (data?.hayMas ?? false)}
+        deshabilitado={esperando}
         onCambiarPagina={irAPagina}
       />
     </section>
