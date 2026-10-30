@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
 import { tema } from "../tema";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -16,6 +16,7 @@ export function Layout() {
   const usuarioNombre = useAuthStore((s) => s.usuarioNombre);
   const usuarioAvatar = useAuthStore((s) => s.usuarioAvatar);
   const esAdmin = useAuthStore((s) => s.usuarioRol?.toLowerCase() === "admin");
+  const location = useLocation();
 
   const enlacesVisibles = esAdmin
     ? [...enlaces, { to: "/admin/productos", label: "Cargar productos" }]
@@ -34,7 +35,9 @@ export function Layout() {
             <span className="grid size-9 place-items-center rounded-xl bg-marca-600 font-bold text-white">
               {tema.inicial}
             </span>
-            <span className="text-lg font-bold tracking-tight">{tema.nombre}</span>
+            <span className="text-lg font-bold tracking-tight">
+              {tema.nombre}
+            </span>
           </div>
 
           <nav className="flex flex-wrap gap-1 text-sm font-semibold">
@@ -80,7 +83,7 @@ export function Layout() {
       </header>
 
       <main className="mx-auto max-w-6xl px-6 py-10">
-        <ErrorBoundary>
+        <ErrorBoundary key={location.pathname}>
           <Outlet />
         </ErrorBoundary>
       </main>
