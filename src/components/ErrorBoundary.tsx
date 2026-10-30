@@ -1,4 +1,4 @@
-import { Component, type ReactNode } from "react";
+import React, { Component, type ReactNode } from "react";
 
 interface Props {
   children: ReactNode;
@@ -18,8 +18,38 @@ interface State {
 // se puede probar en /laboratorio
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { tieneError: false, error: null };
-
+  static getDerivedStateFromError(error: Error): State {
+    return {
+      tieneError: true,
+      error,
+    };
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo): void {
+    console.error(error, info.componentStack);
+  }
   render() {
+    if (this.state.tieneError) {
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
+
+      return (
+        <div>
+          <h2>Algo salió mal!</h2>
+          <p>{this.state.error?.message}</p>
+          <button
+            onClick={() =>
+              this.setState({
+                tieneError: false,
+                error: null,
+              })
+            }
+          >
+            Intentar de nuevo
+          </button>
+        </div>
+      );
+    }
     return this.props.children;
   }
 }
