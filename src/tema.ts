@@ -16,9 +16,13 @@ export const tema = {
     texto:
       "Encuentra productos seleccionados para tu día a día y disfruta una experiencia de compra sencilla.",
   },
-  // categorias de su tienda, con el prefijo del grupo. ejemplo:
-  // { valor: "Ropa-Polos", etiqueta: "Polos" },
-  categorias: [] as Categoria[],
+  // El catálogo y el formulario de carga comparten estos valores exactos.
+  categorias: [
+    { valor: "Gamer-Teclados", etiqueta: "Teclados" },
+    { valor: "Gamer-Mouses", etiqueta: "Mouses" },
+    { valor: "Gamer-Audifonos", etiqueta: "Audífonos" },
+    { valor: "Gamer-Monitores", etiqueta: "Monitores" },
+  ] satisfies Categoria[],
 };
 
 export function etiquetaCategoria(valor: string) {

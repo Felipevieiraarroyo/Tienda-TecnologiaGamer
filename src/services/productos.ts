@@ -1,4 +1,5 @@
 import { api } from "../lib/axios";
+import { tema } from "../tema";
 import type {
   CrearProductoDTO,
   PaginaProductos,
@@ -33,23 +34,46 @@ export const productosService = {
     return respuesta.data.map(convertirProducto);
   },
 
-  // TODO [C]: pedir una sola pagina
-  // - GET /products/?skip=...&limit=...&category=...
-  // - pagina 1 -> skip 0, pagina 2 -> skip porPagina, ...
-  // - la API no devuelve el total: pedir porPagina + 1 y si llegan
-  //   mas de porPagina es que hay pagina siguiente
+  // Un producto adicional permite saber si existe la página siguiente
+  // sin necesitar un total en la respuesta de la API.
   getPagina: async (
     pagina: number,
     porPagina: number,
     categoria: string,
   ): Promise<PaginaProductos> => {
-    console.warn("TODO [C]: getPagina", pagina, porPagina);
-    const respuesta = await api.get<ProductoApi[]>("/products/", {
-      params: categoria !== "Todas" ? { category: categoria } : {},
-    });
+    const skip = (pagina - 1) * porPagina;
+    const categorias = tema.categorias.map((cat) => cat.valor);
+    let productos: ProductoApi[];
+
+    if (categoria === "Todas") {
+      // La API acepta una sola categoría exacta. Consultamos únicamente las
+      // de la tienda; filtrar una página global podría dejar huecos y mezclar grupos.
+      // Para ordenar el conjunto por id necesitamos el prefijo de cada categoría
+      // hasta la página solicitada, más un producto para calcular hayMas.
+      const respuestas = await Promise.all(
+        categorias.map((category) =>
+          api.get<ProductoApi[]>("/products/", {
+            params: { skip: 0, limit: skip + porPagina + 1, category },
+          }),
+        ),
+      );
+      productos = respuestas
+        .flatMap((respuesta) => respuesta.data)
+        .sort((a, b) => a.id - b.id)
+        .slice(skip, skip + porPagina + 1);
+    } else if (categorias.includes(categoria)) {
+      const respuesta = await api.get<ProductoApi[]>("/products/", {
+        params: { skip, limit: porPagina + 1, category: categoria },
+      });
+      productos = respuesta.data;
+    } else {
+      // Nunca consultar categorías de otros equipos.
+      productos = [];
+    }
+
     return {
-      productos: respuesta.data.map(convertirProducto),
-      hayMas: false,
+      productos: productos.slice(0, porPagina).map(convertirProducto),
+      hayMas: productos.length > porPagina,
     };
   },
 
